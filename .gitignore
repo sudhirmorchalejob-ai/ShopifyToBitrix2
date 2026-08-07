@@ -1,0 +1,6 @@
+node_modules/
+.env
+src/shopTokens.json
+src/idMap.json
+*.log
+.DS_Store

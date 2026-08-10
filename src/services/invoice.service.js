@@ -42,23 +42,25 @@ const buildInvoiceFields = (order, contactId) => {
   const invoiceNumber = order.name || `Order #${order.order_number || order.id}`;
   const invoiceUrl = order.invoice_url || order.order_status_url || '';
 
-  return {
-    ACCOUNT_NUMBER: invoiceNumber,
-    PRICE: parseFloat(order.total_price || 0),
-    CURRENCY_ID: order.currency || getTenantConfig().currencyId,
-    DATE_BILL: order.created_at ? order.created_at.split('T')[0] : null,
-    DATE_PAY_BEFORE: order.created_at ? order.created_at.split('T')[0] : null,
-    PAY_SYSTEM_ID: config.invoicePaySystemId,
-    STATUS_ID: config.invoiceStatusId,
-    COMMENTS: `Invoice for ${invoiceNumber}\nPayment gateway: ${(order.payment_gateway_names || []).join(', ') || order.gateway || 'N/A'}`,
-    UF_CRM_INVOICE_NUMBER: invoiceNumber,
-    UF_CRM_INVOICE_URL: invoiceUrl
+  const fields = {
+    title: invoiceNumber,
+    opportunity: parseFloat(order.total_price || 0),
+    currencyId: order.currency || getTenantConfig().currencyId,
+    accountNumber: invoiceNumber,
+    begindate: order.created_at ? order.created_at.split('T')[0] : null,
+    closedate: order.created_at ? order.created_at.split('T')[0] : null,
+    description: `Invoice for ${invoiceNumber}\nPayment gateway: ${(order.payment_gateway_names || []).join(', ') || order.gateway || 'N/A'}`
   };
+  if (contactId) fields.contactId = contactId;
+  return fields;
 };
 
 /**
- * Create a Bitrix24 invoice for an order (dedupe via id_map type 'invoices'),
- * then attempt to attach the invoice PDF to the deal.
+ * Create a Bitrix24 Smart Invoice for an order (dedupe via id_map type
+ * 'invoices'), then attempt to attach the invoice PDF to the deal.
+ *
+ * Uses crm.item with entityTypeId=31 (Smart Invoice) — the legacy crm.invoice.*
+ * methods are unavailable on plans without the Invoices module.
  */
 const syncInvoice = async (order, dealId, opts) => {
   if (!config.invoiceSyncEnabled) return { skipped: true, reason: 'invoice sync disabled' };
@@ -77,19 +79,19 @@ const syncInvoice = async (order, dealId, opts) => {
   let invoiceId;
   try {
     const fields = buildInvoiceFields(order, contactId);
-    if (contactId) fields.CONTACT_ID = contactId;
-    if (dealId) fields.DEAL_ID = dealId;
-
-    const data = await bitrixService.bitrixRequest('crm.invoice.add', { fields });
-    invoiceId = data?.result;
+    const data = await bitrixService.bitrixRequest('crm.item.add', {
+      entityTypeId: config.smartInvoiceEntityTypeId,
+      fields
+    });
+    invoiceId = data?.item?.id || data?.result?.item?.id;
     if (!invoiceId) {
-      console.error('[Invoice] crm.invoice.add returned no id:', JSON.stringify(data).substring(0, 500));
+      console.error('[Invoice] crm.item.add returned no id:', JSON.stringify(data).substring(0, 500));
       return { skipped: true, reason: 'no invoice id returned' };
     }
     await setMapping('invoices', order.id, invoiceId);
-    console.log(`[Invoice] Created invoice ${invoiceId} for order ${order.id}`);
+    console.log(`[Invoice] Created Smart Invoice ${invoiceId} for order ${order.id}`);
   } catch (err) {
-    console.error('[Invoice] crm.invoice.add failed for order', order.id, ':', err.message);
+    console.error('[Invoice] crm.item.add failed for order', order.id, ':', err.message);
     return { skipped: true, reason: err.message };
   }
 

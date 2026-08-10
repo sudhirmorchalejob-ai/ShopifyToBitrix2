@@ -13,9 +13,11 @@ module.exports = {
   abandonedCartLeadStage: process.env.BITRIX_ABANDONED_CART_STAGE || 'NEW',
   checkoutLeadStage: process.env.BITRIX_CHECKOUT_STAGE || 'NEW',
 
-  // Invoice sync
+  // Invoice sync (Smart Invoices via crm.item — legacy crm.invoice.* is not
+  // available on plans without the Invoices module)
   invoiceSyncEnabled: process.env.BITRIX_INVOICE_SYNC_ENABLED === 'true',
-  invoicePaySystemId: parseInt(process.env.BITRIX_INVOICE_PAY_SYSTEM_ID, 10) || 1,
+  smartInvoiceEntityTypeId: parseInt(process.env.BITRIX_SMART_INVOICE_ENTITY_TYPE_ID, 10) || 31,
+  invoicePaySystemId: parseInt(process.env.BITRIX_INVOICE_PAY_SYSTEM_ID, 10) || 84,
   invoiceStatusId: process.env.BITRIX_INVOICE_STATUS_ID || '',
 
   // Two-way sync (Bitrix -> Shopify) shared secret for outbound webhooks

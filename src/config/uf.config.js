@@ -8,6 +8,7 @@ const CONTACT_FIELDS = [
   { code: 'UF_CRM_SHOPIFY_ID',     label: 'Shopify Customer ID',     type: 'string'   },
   { code: 'UF_CRM_CREATED_AT',     label: 'Shopify Created At',      type: 'datetime' },
   { code: 'UF_CRM_CUSTOMER_NOTE',  label: 'Customer Note',           type: 'string'   },
+  { code: 'UF_CRM_CUSTOMER_TAGS',  label: 'Customer Tags',           type: 'string'   },
   { code: 'UF_CRM_TOTAL_ORDERS',   label: 'Total Orders',            type: 'integer'  },
   { code: 'UF_CRM_TOTAL_SPEND',    label: 'Total Spend',             type: 'string'   },
   { code: 'UF_CRM_LAST_PURCHASE',  label: 'Last Purchase Date',      type: 'datetime' },

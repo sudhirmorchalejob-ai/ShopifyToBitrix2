@@ -11,7 +11,7 @@ const TOPICS = [
   { topic: 'products/update', route: 'products-update' },
   { topic: 'products/delete', route: 'products-delete' },
   { topic: 'orders/create', route: 'orders-create' },
-  { topic: 'orders/update', route: 'orders-updated' },
+  { topic: 'orders/updated', route: 'orders-updated' },
   { topic: 'orders/delete', route: 'orders-delete' },
   { topic: 'carts/update', route: 'carts-update' },
   { topic: 'checkouts/create', route: 'checkouts-create' },

@@ -170,7 +170,7 @@ const updateCustomerByFields = async (shopifyId, contact, shopDomain, accessToke
     last_name: contact.LAST_NAME,
     email,
     phone,
-    tags: contact.TAG && contact.TAG.length ? contact.TAG.join(', ') : '',
+    tags: (contact.TAG && contact.TAG.length ? contact.TAG.join(', ') : '') || contact.UF_CRM_CUSTOMER_TAGS || '',
     note: contact.UF_CRM_CUSTOMER_NOTE || ''
   }, shopDomain, accessToken);
 };

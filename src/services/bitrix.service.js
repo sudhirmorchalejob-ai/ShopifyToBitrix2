@@ -326,6 +326,7 @@ const createContact = async (customer, opts = {}) => {
     "ADDRESS_POSTAL_CODE": zip,
     "COMMENTS": comments,
     "TAG": splitTags(customer.tags),
+    "UF_CRM_CUSTOMER_TAGS": customer.tags || '',
     "UF_CRM_SHOPIFY_ID": String(customer.id || ''),
     "UF_CRM_CREATED_AT": customer.created_at || '',
     "UF_CRM_CUSTOMER_NOTE": customer.note || ''
@@ -339,7 +340,13 @@ const createContact = async (customer, opts = {}) => {
   }
 
   let contactId;
-  const existingContact = email ? await findContactByEmail(email) : null;
+  let existingContact = null;
+  const byShopifyId = await findContactByShopifyId(customer.id);
+  if (byShopifyId) {
+    existingContact = { ID: byShopifyId };
+  } else if (email) {
+    existingContact = await findContactByEmail(email);
+  }
 
   if (existingContact) {
     contactId = existingContact.ID;
@@ -568,6 +575,23 @@ const createDeal = async (order, opts = {}) => {
       "PRICE": parseFloat(item.price || 0),
       "QUANTITY": parseInt(item.quantity || 1)
     }));
+
+    const shippingCost = order.shipping_lines && order.shipping_lines[0]
+      ? parseFloat(order.shipping_lines[0].price || 0)
+      : 0;
+    const taxCost = parseFloat(order.total_tax || 0);
+    if (shippingCost) rows.push({ PRODUCT_NAME: 'Shipping', PRICE: shippingCost, QUANTITY: 1 });
+    if (taxCost) rows.push({ PRODUCT_NAME: 'Tax', PRICE: taxCost, QUANTITY: 1 });
+
+    // Bitrix derives OPPORTUNITY from the sum of the product rows and ignores
+    // direct OPPORTUNITY updates once rows exist. Make the rows sum to the real
+    // order total by adding an adjustment row (handles discounts/rounding).
+    const sum = rows.reduce((s, r) => s + r.PRICE * r.QUANTITY, 0);
+    const diff = Number((opportunity - sum).toFixed(2));
+    if (Math.abs(diff) >= 0.005) {
+      rows.push({ PRODUCT_NAME: 'Adjustment', PRICE: diff, QUANTITY: 1 });
+    }
+
     await bitrixRequest('crm.deal.productrows.set', { id: dealId, rows });
   }
 

@@ -33,7 +33,12 @@ const DEAL_FIELDS = [
   { code: 'UF_CRM_INVOICE_NUMBER', label: 'Invoice No.',             type: 'string' },
   { code: 'UF_CRM_INVOICE_URL',    label: 'Invoice URL',             type: 'string' },
   { code: 'UF_CRM_REFUND_STATUS',  label: 'Refund Status',           type: 'string' },
-  { code: 'UF_CRM_REFUND_AMOUNT',  label: 'Refund Amount',           type: 'string' }
+  { code: 'UF_CRM_REFUND_AMOUNT',  label: 'Refund Amount',           type: 'string' },
+  { code: 'UF_CRM_FINANCIAL_STATUS',    label: 'Financial Status',       type: 'string' },
+  { code: 'UF_CRM_FULFILLMENT_STATUS',  label: 'Fulfillment Status',     type: 'string' },
+  { code: 'UF_CRM_ORDER_CHANNEL',       label: 'Order Channel',          type: 'string' },
+  { code: 'UF_CRM_DELIVERY_METHOD',     label: 'Delivery Method',        type: 'string' },
+  { code: 'UF_CRM_DELIVERY_STATUS',     label: 'Delivery Status',        type: 'string' }
 ];
 
 const LEAD_FIELDS = [

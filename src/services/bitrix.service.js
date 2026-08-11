@@ -2,6 +2,7 @@ const axios = require('axios');
 const config = require('../config/bitrix.config');
 const { getTenantConfig } = require('../utils/tenantContext');
 const { setMapping, getMapping, getMappingWithFallback } = require('../utils/idMapStore');
+const { ensureProductPropertyMap } = require('../utils/productProperties');
 
 const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
@@ -386,23 +387,29 @@ const createProduct = async (product, shopDomain, accessToken, apiVersion) => {
     "ACTIVE": (product.status === 'active' || !product.status) ? 'Y' : 'N',
     "CODE": sku || String(product.id),
     "MEASURE": 9,
-    "PROPERTY_98": String(product.id),
-    "PROPERTY_110": product.vendor || '',
-    "PROPERTY_112": product.product_type || '',
-    "PROPERTY_114": product.tags || '',
-    "PROPERTY_116": product.handle || '',
-    "PROPERTY_118": variant.barcode || '',
-    "PROPERTY_120": variant.compare_at_price || '',
-    "PROPERTY_124": variant.inventory_quantity !== undefined ? String(variant.inventory_quantity) : '',
-    "PROPERTY_126": variant.weight ? `${variant.weight} ${variant.weight_unit || ''}`.trim() : '',
-    "PROPERTY_128": product.created_at || '',
-    "PROPERTY_106": variant.taxable ? 'Yes' : 'No',
-    "PROPERTY_108": product.handle && storeDomain ? `https://${storeDomain}/products/${product.handle}` : '',
-    "PROPERTY_130": variant.unit_price || '',
-    "PROPERTY_132": variant.inventory_management === 'shopify' ? 'Physical' : 'Virtual',
-    "PROPERTY_134": variant.requires_shipping ? 'Yes' : 'No',
-    "PROPERTY_136": product.title || '',
-    "PROPERTY_140": (() => {
+    "WIDTH": variant.width || '',
+    "LENGTH": variant.length || '',
+    "HEIGHT": variant.height || ''
+  };
+
+  const propValues = {
+    shopifyProductId: String(product.id),
+    vendor: product.vendor || '',
+    productType: product.product_type || '',
+    tags: product.tags || '',
+    handle: product.handle || '',
+    barcode: variant.barcode || '',
+    compareAtPrice: variant.compare_at_price || '',
+    stockQuantity: variant.inventory_quantity !== undefined ? String(variant.inventory_quantity) : '',
+    weight: variant.weight ? `${variant.weight} ${variant.weight_unit || ''}`.trim() : '',
+    shopifyCreatedAt: product.created_at || '',
+    taxable: variant.taxable ? 'Yes' : 'No',
+    seoUrl: product.handle && storeDomain ? `https://${storeDomain}/products/${product.handle}` : '',
+    unitPrice: variant.unit_price || '',
+    inventoryTracked: variant.inventory_management === 'shopify' ? 'Physical' : 'Virtual',
+    requiresShipping: variant.requires_shipping ? 'Yes' : 'No',
+    seoTitle: product.title || '',
+    variantInfo: (() => {
       const allVariants = product.variants || [];
       const totalVariants = allVariants.length;
       const options = (product.options || []).map(o => {
@@ -418,7 +425,7 @@ const createProduct = async (product, shopDomain, accessToken, apiVersion) => {
       if (variantNames.length > 0) parts.push(variantNames.join(', '));
       return parts.join(' >> ');
     })(),
-    "PROPERTY_142": (() => {
+    boxSize: (() => {
       const w = variant.width;
       const l = variant.length;
       const h = variant.height;
@@ -426,17 +433,21 @@ const createProduct = async (product, shopDomain, accessToken, apiVersion) => {
       if (!w && !l && !h) return '';
       return [w, l, h].filter(v => v !== undefined && v !== null && v !== '').join(` x `) + ` ${unit}`;
     })(),
-    "PROPERTY_144": product.status === 'active' ? 'Active' : product.status === 'draft' ? 'Draft' : 'Inactive',
-    "WIDTH": variant.width || '',
-    "LENGTH": variant.length || '',
-    "HEIGHT": variant.height || ''
+    productStatus: product.status === 'active' ? 'Active' : product.status === 'draft' ? 'Draft' : 'Inactive'
   };
 
   if (shopDomain && accessToken && apiVersion) {
-    fields.PROPERTY_100 = await getCollectionNames(product.id, shopDomain, accessToken, apiVersion);
-    fields.PROPERTY_104 = await getCostPerItem(variant.inventory_item_id, shopDomain, accessToken, apiVersion);
-    fields.PROPERTY_102 = await getProductCategory(product.admin_graphql_api_id, shopDomain, accessToken, apiVersion);
-    fields.PROPERTY_138 = await getCategoryMetafields(product.admin_graphql_api_id, shopDomain, accessToken, apiVersion);
+    propValues.collections = await getCollectionNames(product.id, shopDomain, accessToken, apiVersion);
+    propValues.costPerItem = await getCostPerItem(variant.inventory_item_id, shopDomain, accessToken, apiVersion);
+    propValues.category = await getProductCategory(product.admin_graphql_api_id, shopDomain, accessToken, apiVersion);
+    propValues.categoryMetafields = await getCategoryMetafields(product.admin_graphql_api_id, shopDomain, accessToken, apiVersion);
+  }
+
+  // Map logical property values to the portal's actual PROPERTY_<id> fields.
+  const propMap = await ensureProductPropertyMap(tenant.bitrixWebhookUrl);
+  for (const [key, value] of Object.entries(propValues)) {
+    const field = propMap[key];
+    if (field) fields[field] = value;
   }
 
   if (product.image && product.image.src) {
